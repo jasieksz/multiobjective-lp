@@ -1,0 +1,45 @@
+name: build
+
+on: [push]
+
+jobs:
+  build_solvers:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+#          - os: macos-13  # Intel
+#            cibw_archs: "x86_64"
+        #  - os: macos-14  # Apple Silicon
+        #    cibw_archs: "arm64"
+          - os: ubuntu-latest
+            cibw_archs: "auto"
+#          - os: windows-latest
+#            cibw_archs: "auto"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Debug container environment
+        run: |
+          echo "Using Python: $(which python)"
+          python --version
+          python -c "import sysconfig; print(sysconfig.get_config_vars())"
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.23.2
+        with:
+          package-dir: solvers
+          output-dir: solvers/wheelhouse
+        env:
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
+      - run: |
+          cd solvers
+          ls -l
+          ls -R solvers/wheelhouse/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          path: ./solvers/wheelhouse/*.whl
